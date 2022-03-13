@@ -1,33 +1,69 @@
 const express = require("express");
-const { Excercises } = require("../model/exercises.model");
 const { User } = require("../model/user.model");
 const router = express.Router();
-
-router.post("/", async (req, res) => {
-  const newUser = await new User({
-    username: req.body.username,
-  }).save();
-  res.send(newUser);
-});
 
 router.get("/", async (req, res) => {
   const getAllUser = await User.find();
   res.send(getAllUser);
 });
 
+router.post("/", async (req, res) => {
+  const newUser = await new User({
+    username: req.body.username,
+  }).save();
+
+  res.send(newUser);
+});
+
 router.post("/:id/exercises", async (req, res) => {
   let { description, duration, date } = req.body;
-  const getUserById = await User.findById(req.params.id).exec();
+  
+  date = date ?  new Date(date).toDateString() : new Date().toDateString();
 
-  if (date != null) date = new Date().toString();
-
-  const newExercises = await new Excercises({
-    username: getUserById.username,
-    description,
+  const exercise = {
+    description ,
     duration,
-    date,
-  }).save();
-  res.send(newExercises);
+    date
+  }
+  
+  await User.findByIdAndUpdate(req.params.id,{$push: {exercise} }, 
+    function (err, updatedUser) {
+      if(err) {
+        return console.log('update error:',err);
+      }
+      res.json({
+        _id:updatedUser._id,
+        username:updatedUser.username,
+        exercise
+      });
+    });
+});
+
+router.get("/:id/logs", async (req, res) => {
+  let { limit, from, to } = req.query;
+  from = new Date(from).toDateString();
+  to = new Date(to).toDateString();
+
+    const conditions = {
+    _id:req.params.id,
+    ...(from === true &&
+      to === true && {
+        "exercise.date": {
+            $gt: from,
+            $lt: to,
+          },
+        })
+    };
+
+  const {_id,exercise,username} = await User.findOne(conditions).exec();
+
+  res.json({
+    _id,
+    exercise,
+    username,
+    count:exercise.length
+    }
+  );
 });
 
 module.exports = router;

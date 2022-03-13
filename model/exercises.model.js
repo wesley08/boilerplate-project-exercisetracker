@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 exports.Excercises = mongoose.model(
-  "Excercises",
+  "Exercise",
   new mongoose.Schema({
     username: String,
     description: String,
