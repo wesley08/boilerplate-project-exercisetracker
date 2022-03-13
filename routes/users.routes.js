@@ -51,22 +51,24 @@ router.get("/:id/logs", async (req, res) => {
 
   const conditions = {
     _id: req.params.id,
-    ...(from === true &&
-      to === true && {
+    ...(from &&
+      to && {
         "exercise.date": {
-          $gt: from,
-          $lt: to,
+          $gte: "11",
+          $lte: "12",
         },
       }),
   };
 
-  const { _id, exercise, username } = await User.findOne(conditions).exec();
+  console.log(conditions);
 
+  const user = await User.findOne(conditions).exec();
+  console.log(user);
   res.json({
-    _id,
-    exercise,
-    username,
-    count: exercise.length,
+    _id: user._id,
+    username: user.username,
+    count: user.exercise.length,
+    log: user.exercise,
   });
 });
 
