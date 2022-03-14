@@ -1,14 +1,15 @@
 const express = require("express");
+const { Exercise } = require("../model/exercises.model");
 const { User } = require("../model/user.model");
 const router = express.Router();
 
 router.get("/", async (req, res) => {
   const getAllUser = await User.find();
-  res.json(getAllUser);
+  res.send(getAllUser);
 });
 
 router.post("/", async (req, res) => {
-  const { username, _id } = await new User({
+  const  { username, _id } = await new User({
     username: req.body.username,
   }).save();
 
@@ -26,44 +27,35 @@ router.post("/:id/exercises", async (req, res) => {
     date,
   };
 
-  await User.findByIdAndUpdate(
-    req.params.id,
-    { $push: { exercise } },
-    function (err, updatedUser) {
-      if (err) {
-        return console.log("update error:", err);
-      }
-      res.json({
-        _id: updatedUser._id,
-        username: updatedUser.username,
+  const user = await User.findById(req.params.id);
+  user.exercise.push(exercise);
+  user.save();
+  
+  res.json({
+        username: user.username,
         description,
-        duration,
+        duration: parseInt(duration),
+        _id: user._id,
         date,
       });
-    }
-  );
 });
 
 router.get("/:id/logs", async (req, res) => {
   let { limit, from, to } = req.query;
-  from = new Date(from).toDateString();
-  to = new Date(to).toDateString();
 
-  const conditions = {
-    _id: req.params.id,
-    ...(from &&
-      to && {
-        "exercise.date": {
-          $gte: "11",
-          $lte: "12",
-        },
-      }),
-  };
+  const user = await User.findById(req.params.id).select("-exercise._id").exec();
+  
+  if(from && to){
+    user.exercise = user.exercise.filter(e => (Date.parse(e.date) >= Date.parse(from)) && (Date.parse(e.date) <= Date.parse(to)));
+  }
 
-  console.log(conditions);
+  if(limit){
+    limit = parseInt(limit);
+    user.exercise = user.exercise.slice(0,limit );
+  }
 
-  const user = await User.findOne(conditions).exec();
   console.log(user);
+
   res.json({
     _id: user._id,
     username: user.username,
